@@ -1,5 +1,5 @@
 {
-  "name": "虚拟试衣网",
-  "description": "A virtual try-on web application allowing users to visualize clothing on models using Gemini API.",
+  "name": "Neon Birthday Bash",
+  "description": "A cool, interactive, physics-based birthday celebration web app with neon aesthetics and interactive elements.",
   "requestFramePermissions": []
 }
