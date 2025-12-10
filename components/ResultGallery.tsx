@@ -1,86 +1,119 @@
 import React from 'react';
-import { Download, Maximize2, RefreshCw } from 'lucide-react';
-import { GeneratedResult } from '../types';
+import { Download, Loader2, AlertCircle } from 'lucide-react';
+import { GenerationResult, ViewAngle } from '../types';
+import JSZip from 'jszip';
 
 interface ResultGalleryProps {
-  results: GeneratedResult[];
-  onDownload: (url: string, filename: string) => void;
+  results: GenerationResult[];
   isGenerating: boolean;
 }
 
-const ResultGallery: React.FC<ResultGalleryProps> = ({ results, onDownload, isGenerating }) => {
+const ResultGallery: React.FC<ResultGalleryProps> = ({ results, isGenerating }) => {
+  
+  const saveAs = (blobOrUrl: Blob | string, filename: string) => {
+    const link = document.createElement('a');
+    if (typeof blobOrUrl === 'string') {
+      link.href = blobOrUrl;
+    } else {
+      link.href = URL.createObjectURL(blobOrUrl);
+    }
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (typeof blobOrUrl !== 'string') {
+      setTimeout(() => URL.revokeObjectURL(link.href), 100);
+    }
+  };
+
+  const handleDownload = (url: string | null, filename: string) => {
+    if (url) {
+      saveAs(url, filename);
+    }
+  };
+
+  const handleDownloadAll = async () => {
+    const zip = new JSZip();
+    let hasContent = false;
+
+    results.forEach((res) => {
+      if (res.imageUrl) {
+        hasContent = true;
+        // Remove data:image/xxx;base64, prefix
+        const base64Data = res.imageUrl.split(',')[1];
+        zip.file(`try-on-${res.angle.replace(/\s+/g, '-').toLowerCase()}.png`, base64Data, { base64: true });
+      }
+    });
+
+    if (hasContent) {
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, 'virtustyle-results.zip');
+    }
+  };
+
+  const hasAnyResult = results.some(r => r.imageUrl !== null);
+
   return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-lg flex flex-col h-full">
-      <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-        <h3 className="font-semibold text-slate-100 flex items-center gap-2">
-          <span className="bg-indigo-500 w-2 h-6 rounded-sm"></span>
-          Generated Results
-        </h3>
-        {isGenerating && (
-          <div className="flex items-center gap-2 text-indigo-400 text-sm animate-pulse">
-            <RefreshCw size={14} className="animate-spin" />
-            Processing...
-          </div>
+    <div className="flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-100">
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <h2 className="font-serif text-lg font-bold text-gray-800">Generated Results</h2>
+        {hasAnyResult && (
+          <button
+            onClick={handleDownloadAll}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-md hover:bg-gray-800 transition-colors"
+          >
+            <Download size={14} />
+            Download All
+          </button>
         )}
       </div>
 
-      <div className="flex-1 p-4 grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-min overflow-y-auto">
-        {results.map((res, idx) => (
-          <div key={res.angle} className="bg-slate-900 rounded-lg border border-slate-700 overflow-hidden flex flex-col group relative aspect-[3/4]">
-            {/* Header */}
-            <div className="absolute top-0 left-0 right-0 z-10 p-3 flex justify-between items-start opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/60 to-transparent">
-               <span className="text-xs font-bold text-white bg-black/40 px-2 py-1 rounded backdrop-blur-md">
-                 {res.angle}
-               </span>
-               <div className="flex gap-1">
-                 {!res.loading && !res.error && res.imageUrl && (
-                    <button
-                      onClick={() => onDownload(res.imageUrl, `try-on-${res.angle}.png`)}
-                      className="p-1.5 bg-white/10 hover:bg-white/20 text-white rounded-md backdrop-blur-md transition-colors"
-                      title="Download"
-                    >
-                      <Download size={16} />
-                    </button>
-                 )}
-               </div>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 relative w-full h-full flex items-center justify-center">
-              {res.loading ? (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-                  <p className="text-xs text-indigo-300 font-medium">Rendering...</p>
+      <div className="flex-1 p-4 overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {results.map((result, idx) => (
+            <div key={idx} className="flex flex-col gap-2">
+              <div className="relative aspect-[3/4] bg-gray-50 rounded-lg border border-gray-100 overflow-hidden group">
+                {result.loading ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-accent bg-gray-50/80 backdrop-blur-sm z-10">
+                    <Loader2 size={32} className="animate-spin mb-2" />
+                    <span className="text-xs font-medium tracking-wide">Generating {result.angle}...</span>
+                  </div>
+                ) : result.error ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 p-4 text-center">
+                    <AlertCircle size={24} className="mb-2" />
+                    <span className="text-xs">{result.error}</span>
+                  </div>
+                ) : result.imageUrl ? (
+                  <>
+                    <img 
+                      src={result.imageUrl} 
+                      alt={result.angle} 
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <button 
+                        onClick={() => handleDownload(result.imageUrl, `try-on-${result.angle}.png`)}
+                        className="p-2 bg-white text-primary rounded-full hover:bg-gray-100 transition-colors"
+                        title="Download"
+                      >
+                        <Download size={18} />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                    <span className="text-xs uppercase tracking-wider font-medium">Waiting to generate</span>
+                  </div>
+                )}
+                
+                {/* Label */}
+                <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-white text-[10px] uppercase font-bold tracking-wider">
+                  {result.angle}
                 </div>
-              ) : res.error ? (
-                <div className="p-4 text-center">
-                  <p className="text-red-400 text-sm font-medium mb-1">Generation Failed</p>
-                  <p className="text-xs text-slate-500">{res.error}</p>
-                </div>
-              ) : res.imageUrl ? (
-                <img
-                  src={res.imageUrl}
-                  alt={`Result ${res.angle}`}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-slate-600 flex flex-col items-center">
-                   <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center mb-2">
-                      <Maximize2 size={24} className="opacity-20" />
-                   </div>
-                   <span className="text-sm">Waiting for generation</span>
-                </div>
-              )}
+              </div>
             </div>
-            
-            {/* Footer Label for non-hover state visibility */}
-            <div className="absolute bottom-3 left-3 md:hidden">
-               <span className="text-xs font-bold text-white bg-black/40 px-2 py-1 rounded backdrop-blur-md">
-                 {res.angle}
-               </span>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

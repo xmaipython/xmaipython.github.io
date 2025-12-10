@@ -1,4 +1,5 @@
 {
-  "name": "NexusFit AI Try-On",
-  "description": "A professional AI-powered virtual try-on application allowing users to visualize clothing on custom models with high realism and multi-angle views."
+  "name": "虚拟试衣网",
+  "description": "A virtual try-on web application allowing users to visualize clothing on models using Gemini API.",
+  "requestFramePermissions": []
 }

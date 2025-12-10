@@ -1,22 +1,25 @@
-export interface TemplateImage {
+export enum ViewAngle {
+  FRONT = 'Front View',
+  SIDE = 'Side View',
+  ANGLE_45 = '45 Degree View',
+  BACK = 'Back View'
+}
+
+export interface StockItem {
   id: string;
   url: string;
-  label: string;
-  type: 'person' | 'cloth';
+  name: string;
 }
 
-export interface GeneratedResult {
-  angle: string;
-  imageUrl: string;
+export interface GenerationResult {
+  angle: ViewAngle;
+  imageUrl: string | null;
   loading: boolean;
-  error?: string;
+  error: string | null;
 }
 
-export enum ViewAngle {
-  FRONT = '0° Front',
-  SIDE_45 = '45° Side',
-  SIDE_90 = '90° Profile',
-  BACK = '180° Back'
+export interface ImageSelection {
+  file: File | null;
+  previewUrl: string | null;
+  isStock: boolean;
 }
-
-export type TryOnState = 'idle' | 'generating' | 'complete' | 'error';

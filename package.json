@@ -1,5 +1,5 @@
 {
-  "name": "nexusfit-ai-try-on",
+  "name": "虚拟试衣网",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,10 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
     "@google/genai": "^1.32.0",
-    "lucide-react": "^0.556.0"
+    "lucide-react": "^0.556.0",
+    "react-dom": "^19.2.1",
+    "react": "^19.2.1",
+    "jszip": "^3.10.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
