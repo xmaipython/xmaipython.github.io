@@ -1,43 +1,492 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>孔焕焕 - 3D 生日庆典</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      body {
-        background-color: #050510; /* Deep midnight blue/black */
-        margin: 0;
-        overflow: hidden;
-        color: white;
-        font-family: 'Microsoft YaHei', sans-serif;
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>鉴色 · 四色排列</title>
+<style>
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --bg0:#101b1a; --bg1:#162623; --bg2:#0c1514;
+    --gold:#e6c98a; --gold-d:#c9a862;
+    --ink:#f3ede1; --muted:rgba(243,237,225,.52); --faint:rgba(243,237,225,.3);
+    --line:rgba(230,201,138,.16); --line-soft:rgba(255,255,255,.08);
+    --glass:rgba(255,255,255,.045); --glass-2:rgba(255,255,255,.025);
+    --win:#8fd6a8; --lose:#e98a82;
+    --serif:"Songti SC","STSong","Noto Serif SC",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;
+  }
+  html,body{ margin:0; padding:0; min-height:100%; }
+  body{
+    font-family:var(--sans); color:var(--ink);
+    background:
+      radial-gradient(900px 520px at 50% -8%, rgba(230,201,138,.10), transparent 62%),
+      radial-gradient(700px 420px at 12% 92%, rgba(90,150,130,.10), transparent 60%),
+      linear-gradient(165deg,var(--bg0),var(--bg1) 48%,var(--bg2));
+    background-attachment:fixed;
+    display:flex; justify-content:center; align-items:flex-start;
+    padding:28px 16px 48px; min-height:100vh;
+  }
+  .app{ width:100%; max-width:960px; position:relative; }
+  .layout{ display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); gap:16px; align-items:start; }
+  .col{ min-width:0; }
+
+  /* ===== 顶部 ===== */
+  .head{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:20px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:40px; height:40px; flex:0 0 auto; border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(145deg,rgba(230,201,138,.18),rgba(230,201,138,.05));
+    border:1px solid var(--line); box-shadow:inset 0 1px rgba(255,255,255,.12);
+  }
+  .brand-mark svg{ width:20px; height:26px; }
+  .title{ font-family:var(--serif); font-size:27px; font-weight:700; letter-spacing:3px; line-height:1.05; }
+  .subtitle{ font-size:12px; color:var(--muted); margin-top:5px; letter-spacing:.4px; }
+  .stats{ display:flex; gap:8px; }
+  .stat{
+    min-width:56px; text-align:center; padding:8px 10px 7px; border-radius:13px;
+    background:var(--glass); border:1px solid var(--line-soft);
+  }
+  .stat .k{ font-size:10px; color:var(--muted); letter-spacing:1px; }
+  .stat .v{ font-family:var(--serif); font-size:21px; font-weight:700; line-height:1.15; margin-top:2px; }
+  .stat .v small{ font-size:12px; color:var(--muted); font-weight:400; }
+  .stat.warn{ border-color:rgba(233,138,130,.4); background:rgba(233,138,130,.08); }
+  .stat.warn .v{ color:var(--lose); }
+
+  /* ===== 卡片 ===== */
+  .card{
+    background:linear-gradient(160deg,var(--glass),var(--glass-2));
+    border:1px solid var(--line-soft); border-radius:22px;
+    box-shadow:0 18px 46px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.05);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    padding:20px 20px 18px; margin-bottom:16px; position:relative; overflow:hidden;
+  }
+  .card::before{
+    content:""; position:absolute; inset:0; border-radius:22px; pointer-events:none;
+    background:linear-gradient(120deg,rgba(255,255,255,.05),transparent 30%);
+  }
+  .card-hd{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; position:relative; }
+  .card-hd h2{ font-size:13px; font-weight:600; letter-spacing:2px; color:var(--gold); margin:0; }
+  .round-tag{
+    font-size:11px; color:var(--muted); letter-spacing:1px;
+    border:1px solid var(--line-soft); border-radius:20px; padding:4px 11px;
+  }
+
+  /* ===== 酒架 ===== */
+  .shelf{ position:relative; height:250px; margin:8px 0 2px; }
+  .bottle-slot{
+    position:absolute; bottom:34px; width:82px; height:214px; margin-left:-41px;
+    transition:left .46s cubic-bezier(.34,1.12,.5,1);
+    cursor:pointer;
+  }
+  .bottle-inner{
+    width:100%; height:100%; position:relative;
+    transition:transform .24s cubic-bezier(.2,.8,.2,1), filter .24s ease;
+    filter:drop-shadow(0 10px 12px rgba(0,0,0,.35));
+  }
+  .bottle-slot:hover .bottle-inner{ transform:translateY(-6px); filter:drop-shadow(0 16px 16px rgba(0,0,0,.42)); }
+  .bottle-slot.sel .bottle-inner{
+    transform:translateY(-16px) scale(1.045);
+    filter:drop-shadow(0 0 14px rgba(230,201,138,.7)) drop-shadow(0 16px 16px rgba(0,0,0,.4));
+  }
+  .bottle-slot.sel::after{
+    content:"已选"; position:absolute; left:50%; top:-4px; transform:translateX(-50%);
+    font-size:10px; letter-spacing:1px; color:#1a1510; background:var(--gold);
+    padding:2px 8px; border-radius:10px; white-space:nowrap;
+  }
+  .bottle-inner svg{ display:block; width:100%; height:100%; overflow:visible; }
+  .bottle-slot.shake .bottle-inner{ animation:shk .4s ease; }
+  @keyframes shk{ 0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 45%{transform:translateX(6px)} 70%{transform:translateX(-4px)} }
+  .bottle-slot.jump .bottle-inner{ animation:jump .6s cubic-bezier(.3,1.4,.5,1); }
+  @keyframes jump{ 0%,100%{transform:translateY(0)} 35%{transform:translateY(-26px) rotate(-3deg)} 65%{transform:translateY(-8px) rotate(2deg)} }
+  /* 酒架底座 */
+  .rack{ position:absolute; left:2%; right:2%; bottom:20px; height:16px; border-radius:6px;
+    background:linear-gradient(180deg,#3a2a20,#241a13); border:1px solid rgba(230,201,138,.18);
+    box-shadow:0 10px 18px rgba(0,0,0,.45), inset 0 1px rgba(255,255,255,.08); }
+  .rack::after{ content:""; position:absolute; left:8%; right:8%; top:-2px; height:3px; border-radius:3px;
+    background:linear-gradient(90deg,transparent,rgba(230,201,138,.35),transparent); }
+
+  /* ===== 消息 ===== */
+  .msg{
+    text-align:center; min-height:24px; font-size:13.5px; color:var(--muted);
+    margin:14px 8px 16px; letter-spacing:.5px; line-height:1.6; transition:color .2s;
+  }
+  .msg.win{ font-family:var(--serif); font-size:24px; font-weight:700; color:var(--win); letter-spacing:3px; text-shadow:0 0 22px rgba(143,214,168,.45); }
+  .msg.lose{ color:var(--lose); }
+  .msg.hintgood{ color:var(--gold); }
+
+  /* ===== 按钮 ===== */
+  .btns{ display:flex; gap:10px; }
+  button{
+    font-family:inherit; font-size:14.5px; letter-spacing:1px; border-radius:13px; padding:12px 16px;
+    border:1px solid var(--line-soft); background:rgba(255,255,255,.05); color:var(--ink);
+    cursor:pointer; transition:transform .12s, background .2s, border-color .2s, box-shadow .2s;
+  }
+  button:hover{ background:rgba(255,255,255,.1); border-color:rgba(230,201,138,.3); }
+  button:active{ transform:scale(.96); }
+  #submit{
+    flex:2; font-weight:700; color:#1c1710; border-color:transparent;
+    background:linear-gradient(145deg,#f0d79c,#d4b070);
+    box-shadow:0 8px 20px rgba(212,176,112,.25), inset 0 1px rgba(255,255,255,.5);
+  }
+  #submit:hover{ background:linear-gradient(145deg,#f6e0ae,#dcb978); }
+  #reset{ flex:1; }
+  .sound{
+    flex:0 0 auto; width:46px; padding:12px 0; font-size:12px; color:var(--muted);
+  }
+  .sound.on{ color:var(--gold); border-color:var(--line); }
+
+  .legend{ display:flex; justify-content:center; gap:22px; flex-wrap:wrap; font-size:11.5px; color:var(--muted); margin-top:16px; }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .dot{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .dot.on{ background:var(--gold); box-shadow:0 0 8px rgba(230,201,138,.5); }
+  .dot.off{ border:1.5px solid var(--faint); }
+
+  /* ===== 历史 ===== */
+  .hist-list{ position:relative; margin-top:8px; }
+  .empty{ font-size:12.5px; color:var(--faint); text-align:center; padding:18px 0 8px; letter-spacing:1px; }
+  .row{ display:flex; align-items:center; padding:9px 4px; border-bottom:1px solid var(--line-soft); }
+  .row:last-child{ border-bottom:none; }
+  .row .num{ font-family:var(--serif); font-size:12px; color:var(--faint); width:26px; flex:0 0 auto; }
+  .guess{ display:flex; gap:7px; margin-left:10px; }
+  .chip{ width:20px; height:20px; border-radius:50%; box-shadow:inset 0 1px 2px rgba(255,255,255,.35), 0 1px 3px rgba(0,0,0,.3); }
+  .hit{ display:inline-flex; align-items:baseline; gap:5px; margin-left:auto; padding-left:12px; flex:0 0 auto; }
+  .hit b{ font-family:var(--serif); font-size:19px; color:var(--gold); min-width:20px; text-align:center; }
+  .hit span{ font-size:10.5px; color:var(--muted); }
+  .row.new .hit b{ animation:pop .34s cubic-bezier(.2,1.5,.5,1) both; }
+  @keyframes pop{ from{ transform:scale(0); opacity:0 } to{ transform:scale(1); opacity:1 } }
+
+  /* ===== 规则 ===== */
+  .rules{ font-size:11.5px; line-height:2; color:var(--muted); padding:2px 4px; }
+  .rules b{ color:var(--gold); font-weight:600; }
+
+  /* ===== 庆祝粒子 ===== */
+  .confetti{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:99; }
+  .cf{ position:absolute; top:-24px; width:9px; height:15px; border-radius:2px; opacity:0;
+       animation:fall linear forwards; }
+  @keyframes fall{ 0%{ opacity:0; transform:translateY(0) rotate(0) } 8%{opacity:1} 100%{ opacity:0; transform:translateY(105vh) rotate(760deg) } }
+
+  @media (max-width:720px){
+    .layout{ grid-template-columns:1fr; }
+    .app{ max-width:680px; }
+  }
+  @media (max-width:560px){
+    body{ padding:18px 12px 34px; }
+    .head{ flex-direction:column; gap:14px; }
+    .stats{ width:100%; }
+    .stat{ flex:1; }
+    .title{ font-size:23px; }
+    .shelf{ height:214px; }
+    .bottle-slot{ width:64px; margin-left:-32px; height:180px; bottom:30px; }
+    .rack{ bottom:16px; }
+    .card{ padding:16px 14px; border-radius:18px; }
+    .legend{ gap:14px; }
+  }
+  @media (max-width:360px){ .bottle-slot{ width:56px; margin-left:-28px; height:162px; } .shelf{ height:196px; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <div class="head">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 32" xmlns="http://www.w3.org/2000/svg">
+          <rect x="9" y="1" width="6" height="5" rx="1" fill="#c9a862"/>
+          <path d="M9,6 L15,6 L15,11 C15,13 20,14 20,19 L20,28 C20,30 18,31 16,31 L8,31 C6,31 4,30 4,28 L4,19 C4,14 9,13 9,11 Z" fill="rgba(230,201,138,.55)" stroke="#e6c98a" stroke-width=".8"/>
+        </svg>
+      </div>
+      <div>
+        <div class="title">鉴色</div>
+        <div class="subtitle">四色各一位 · 交换出正确的顺序</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">连胜</div><div class="v" id="streak">0</div></div>
+      <div class="stat"><div class="k">最佳</div><div class="v" id="best">0</div></div>
+      <div class="stat" id="triesBox"><div class="k">机会</div><div class="v" id="tries">8</div></div>
+    </div>
+  </div>
+
+  <div class="layout">
+  <div class="col">
+
+  <div class="card">
+    <div class="card-hd">
+      <h2>酒 架</h2>
+      <div class="round-tag" id="roundTag">第 1 局</div>
+    </div>
+
+    <div class="shelf" id="shelf">
+      <div class="rack"></div>
+    </div>
+
+    <div class="msg" id="msg">点两个酒瓶，交换它们的位置</div>
+
+    <div class="btns">
+      <button id="submit">提交答案</button>
+      <button id="reset">重开</button>
+      <button id="soundBtn" class="sound on" title="音效开关">音效</button>
+    </div>
+
+    <div class="legend">
+      <span>提交后只告诉你「命中几瓶」，不透露是哪几瓶 —— 靠自己推理</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="rules">
+      <b>玩法</b>　四只酒瓶红、蓝、黄、绿各一只，正确顺序是它们的一个排列。<br>
+      点两只酒瓶即可<b>交换位置</b>，排好后点「提交答案」。系统<b>只告诉你命中了几瓶</b>，绝不会说是哪几瓶 —— 具体是谁站对了，要自己推理。用最多 <b>8 次</b>机会找出正确顺序。
+    </div>
+  </div>
+
+  </div><!-- /左列 -->
+
+  <div class="col">
+  <div class="card">
+    <div class="card-hd"><h2>历史记录</h2></div>
+    <div class="hist-list" id="history"><div class="empty">提交后，推理线索会记在这里</div></div>
+  </div>
+
+  </div><!-- /右列 -->
+  </div><!-- /layout -->
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var COLORS = [
+    { name:'红', fill:'#d64550', dark:'#8f2630', light:'#f28a90' },
+    { name:'蓝', fill:'#3f7fd4', dark:'#24539a', light:'#8bbaf0' },
+    { name:'黄', fill:'#e0a526', dark:'#a87612', light:'#f5d37c' },
+    { name:'绿', fill:'#2fa37a', dark:'#196b4f', light:'#7ad4b0' }
+  ];
+  var NAME = ['红','蓝','黄','绿'];
+  var MAX_TRIES = 8;
+
+  var secret=[], order=[], sel=null, tries=MAX_TRIES, history=[], over=false;
+  var streak=0, round=0;
+  var best = parseInt(localStorage.getItem('jiansse_best')||'0',10)||0;
+  var wins = parseInt(localStorage.getItem('jiansse_wins')||'0',10)||0;
+  var soundOn = true;
+
+  var $ = function(id){ return document.getElementById(id); };
+  var shelf = $('shelf'), msgEl = $('msg');
+  var slots = [];   // slots[color] = DOM 元素（按颜色固定，位置随 order 变化）
+
+  /* ---------- 生成一只精致酒瓶的 SVG ---------- */
+  function bottleSVG(c){
+    var col = COLORS[c], id = 'b'+c;
+    return ''+
+    '<svg viewBox="0 0 80 200" xmlns="http://www.w3.org/2000/svg">'+
+      '<defs>'+
+        '<linearGradient id="glass'+id+'" x1="0" y1="0" x2="1" y2="0">'+
+          '<stop offset="0" stop-color="'+col.dark+'"/>'+
+          '<stop offset=".22" stop-color="'+col.fill+'"/>'+
+          '<stop offset=".6" stop-color="'+col.fill+'"/>'+
+          '<stop offset="1" stop-color="'+col.dark+'"/>'+
+        '</linearGradient>'+
+        '<linearGradient id="shine'+id+'" x1="0" y1="0" x2="1" y2="0">'+
+          '<stop offset="0" stop-color="rgba(255,255,255,.5)"/>'+
+          '<stop offset=".28" stop-color="rgba(255,255,255,.08)"/>'+
+          '<stop offset=".62" stop-color="rgba(255,255,255,0)"/>'+
+          '<stop offset="1" stop-color="rgba(0,0,0,.14)"/>'+
+        '</linearGradient>'+
+      '</defs>'+
+      '<ellipse cx="40" cy="193" rx="25" ry="4" fill="rgba(0,0,0,.38)"/>'+
+      '<rect x="33" y="7" width="14" height="13" rx="2" fill="#b98a58"/>'+
+      '<rect x="33" y="7" width="5" height="13" rx="1" fill="rgba(255,255,255,.14)"/>'+
+      '<rect x="32" y="17" width="16" height="4" rx="1.5" fill="'+col.dark+'"/>'+
+      '<path d="M33,21 L47,21 L47,56 C47,64 68,68 68,87 L68,178 C68,186 62,190 54,190 L26,190 C18,190 12,186 12,178 L12,87 C12,68 33,64 33,56 Z" fill="url(#glass'+id+')" stroke="rgba(255,255,255,.22)" stroke-width="1"/>'+
+      '<path d="M16,98 C16,92 20,89 26,88 L54,88 C60,89 64,92 64,98 L64,176 C64,183 59,187 53,187 L27,187 C21,187 16,183 16,176 Z" fill="'+col.fill+'" opacity=".5"/>'+
+      '<ellipse cx="40" cy="94" rx="24" ry="4.5" fill="'+col.light+'" opacity=".55"/>'+
+      '<path d="M33,21 L47,21 L47,56 C47,64 68,68 68,87 L68,178 C68,186 62,190 54,190 L26,190 C18,190 12,186 12,178 L12,87 C12,68 33,64 33,56 Z" fill="url(#shine'+id+')"/>'+
+      '<ellipse cx="24" cy="130" rx="3.2" ry="30" fill="rgba(255,255,255,.4)" transform="rotate(5 24 130)"/>'+
+      '<rect x="25" y="122" width="30" height="36" rx="3.5" fill="rgba(252,247,236,.92)"/>'+
+      '<rect x="25" y="122" width="30" height="36" rx="3.5" fill="none" stroke="'+col.dark+'" stroke-opacity=".35"/>'+
+      '<text x="40" y="145" text-anchor="middle" font-family="Songti SC,STSong,serif" font-size="16" font-weight="700" fill="'+col.dark+'">'+col.name+'</text>'+
+    '</svg>';
+  }
+
+  /* ---------- 初始化瓶子 ---------- */
+  for(var c=0;c<4;c++){
+    var slot=document.createElement('div');
+    slot.className='bottle-slot';
+    slot.dataset.c=c;
+    slot.innerHTML='<div class="bottle-inner">'+bottleSVG(c)+'</div>';
+    shelf.appendChild(slot);
+    slots.push(slot);
+    (function(idx){
+      slot.addEventListener('click',function(){ onBottle(idx); });
+    })(c);
+  }
+
+  /* ---------- 工具 ---------- */
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t; } return a; }
+  function same(a,b){ for(var i=0;i<4;i++) if(a[i]!==b[i]) return false; return true; }
+  function setMsg(text,cls){ msgEl.textContent=text; msgEl.className='msg '+(cls||''); }
+
+  /* ---------- 渲染 ---------- */
+  function renderPositions(){
+    for(var pos=0;pos<4;pos++){
+      var color=order[pos];
+      slots[color].style.left=((pos+0.5)*25)+'%';
+    }
+  }
+  function renderSelection(){
+    for(var c=0;c<4;c++) slots[c].classList.toggle('sel', c===sel && !over);
+  }
+  function renderStats(){
+    $('streak').textContent=streak;
+    $('best').textContent=best;
+    $('tries').textContent=tries;
+    $('triesBox').classList.toggle('warn', tries<=2 && !over);
+    $('roundTag').textContent='第 '+round+' 局';
+  }
+  function renderHistory(){
+    if(!history.length){ $('history').innerHTML='<div class="empty">提交后，推理线索会记在这里</div>'; return; }
+    var h='';
+    for(var i=0;i<history.length;i++){
+      var r=history[i], chips='';
+      for(var j=0;j<4;j++) chips+='<span class="chip" style="background:'+COLORS[r.g[j]].fill+'"></span>';
+      h+='<div class="row'+(i===history.length-1?' new':'')+'">'+
+         '<span class="num">'+String(i+1).padStart(2,'0')+'</span>'+
+         '<span class="guess">'+chips+'</span>'+
+         '<span class="hit"><b>'+r.e+'</b><span>瓶命中</span></span>'+
+         '</div>';
+    }
+    $('history').innerHTML=h;
+  }
+
+  /* ---------- 音效 ---------- */
+  function tone(freq,dur,type,vol,delay){
+    if(!soundOn) return;
+    try{
+      var Ctx=window.AudioContext||window.webkitAudioContext;
+      if(!Ctx) return;
+      if(!tone.ctx) tone.ctx=new Ctx();
+      var ctx=tone.ctx, t=ctx.currentTime+(delay||0);
+      var o=ctx.createOscillator(), g=ctx.createGain();
+      o.type=type||'sine'; o.frequency.setValueAtTime(freq,t);
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(vol||0.08,t+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t); o.stop(t+dur+0.02);
+    }catch(e){}
+  }
+  function sSelect(){ tone(660,.09,'sine',.06); }
+  function sSwap(){ tone(420,.07,'triangle',.07); tone(620,.09,'triangle',.05,.05); }
+  function sSubmit(){ tone(300,.12,'sine',.08); }
+  function sWrong(){ tone(170,.22,'sawtooth',.05); }
+  function sWin(){ [523,659,784,1047,1319].forEach(function(f,i){ tone(f,.32,'sine',.09,i*0.11); }); }
+  function sLose(){ [300,250,200].forEach(function(f,i){ tone(f,.28,'triangle',.07,i*0.13); }); }
+
+  /* ---------- 游戏逻辑 ---------- */
+  function newRound(){
+    secret=shuffle([0,1,2,3]);
+    do{ order=shuffle([0,1,2,3]); }while(same(order,secret));
+    sel=null; tries=MAX_TRIES; history=[]; over=false; round++;
+    renderPositions(); renderSelection(); renderStats(); renderHistory();
+    setMsg('点两个酒瓶，交换它们的位置','');
+  }
+
+  function onBottle(c){
+    if(over) return;
+    if(sel===null){
+      sel=c; sSelect(); renderSelection();
+      setMsg('已选「'+NAME[c]+'」，再点一只交换','');
+    }else if(sel===c){
+      sel=null; renderSelection();
+      setMsg('已取消选择','');
+    }else{
+      var a=NAME[sel], b=NAME[c];
+      var p1=order.indexOf(sel), p2=order.indexOf(c);
+      order[p1]=c; order[p2]=sel;
+      sel=null; sSwap();
+      renderPositions(); renderSelection();
+      setMsg('已交换「'+a+'」和「'+b+'」，继续调整或提交','');
+    }
+  }
+
+  function submit(){
+    if(over) return;
+    if(sel!==null){ sel=null; renderSelection(); }
+    var e=0;
+    for(var i=0;i<4;i++) if(order[i]===secret[i]) e++;
+    sSubmit();
+    if(e===4){
+      over=true; streak++; wins++;
+      history.push({g:order.slice(),e:e});
+      renderHistory();
+      if(streak>best){ best=streak; localStorage.setItem('jiansse_best',String(best)); }
+      localStorage.setItem('jiansse_wins',String(wins));
+      renderStats(); renderSelection();
+      setMsg('恭喜过关！', 'win');
+      sWin(); celebrate();
+    }else{
+      tries--; history.push({g:order.slice(),e:e});
+      renderHistory(); renderStats();
+      for(var c=0;c<4;c++){
+        (function(el){ el.classList.add('shake'); setTimeout(function(){ el.classList.remove('shake'); },420); })(slots[c]);
       }
-      canvas {
-        display: block;
-      }
-      .fade-in {
-        animation: fadeIn 2s ease-out forwards;
-      }
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-    </style>
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://aistudiocdn.com/react@^19.2.1",
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-        "react/": "https://aistudiocdn.com/react@^19.2.1/",
-        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.556.0"
+      sWrong();
+      if(tries<=0){
+        over=true; renderStats();
+        var s=''; for(var i=0;i<4;i++) s+=NAME[secret[i]]+'　';
+        setMsg('机会用尽 · 答案是 '+s, 'lose');
+        streak=0; renderStats();
+        sLose();
+      }else{
+        setMsg('命中 '+e+' 瓶，'+(tries<=2?'只剩 '+tries+' 次机会了！':'是哪几瓶，再想想'), e>0?'hintgood':'');
       }
     }
-    </script>
-  <link rel="stylesheet" href="/index.css">
-</head>
-  <body>
-    <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
+  }
+
+  /* ---------- 过关庆祝 ---------- */
+  function celebrate(){
+    for(var c=0;c<4;c++){
+      (function(el,i){
+        setTimeout(function(){ el.classList.add('jump'); setTimeout(function(){ el.classList.remove('jump'); },620); }, i*110);
+      })(slots[c],c);
+    }
+    var box=document.createElement('div');
+    box.className='confetti'; document.body.appendChild(box);
+    var palette=['#e6c98a','#d64550','#3f7fd4','#e0a526','#2fa37a','#f3ede1'];
+    for(var i=0;i<70;i++){
+      var p=document.createElement('i');
+      p.className='cf';
+      p.style.left=(Math.random()*100)+'%';
+      p.style.background=palette[Math.floor(Math.random()*palette.length)];
+      p.style.animationDuration=(2+Math.random()*1.8)+'s';
+      p.style.animationDelay=(Math.random()*0.5)+'s';
+      p.style.width=(6+Math.random()*6)+'px';
+      p.style.height=(10+Math.random()*8)+'px';
+      box.appendChild(p);
+    }
+    setTimeout(function(){ box.remove(); },4600);
+  }
+
+  /* ---------- 绑定 ---------- */
+  $('submit').addEventListener('click',submit);
+  $('reset').addEventListener('click',function(){ newRound(); });
+  $('soundBtn').addEventListener('click',function(){
+    soundOn=!soundOn;
+    var b=$('soundBtn');
+    b.classList.toggle('on',soundOn);
+    b.textContent=soundOn?'音效':'静音';
+    if(soundOn) sSelect();
+  });
+  document.addEventListener('keydown',function(ev){
+    if(ev.key==='Enter'){ submit(); }
+  });
+
+  newRound();
+})();
+</script>
 </body>
 </html>
